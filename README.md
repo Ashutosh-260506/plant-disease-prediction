@@ -37,11 +37,11 @@ Result + Visualization
 
 ### Plant Image Upload
 
-![PlantLens AI Upload](docs/upload-screen.png)
+![PlantLens AI Upload](docs/upload-screen.png.png)
 
 ### Disease Prediction & Grad-CAM
 
-![PlantLens AI Result](docs/result-screen.png)
+![PlantLens AI Result](docs/result-screen.png.png)
 
 ## 🛠️ Tech Stack
 
