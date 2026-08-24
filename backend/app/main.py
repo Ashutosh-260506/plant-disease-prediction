@@ -10,14 +10,17 @@ from app.preprocessing import preprocess_image
 from app.gradcam import make_gradcam_heatmap
 from app.visualization import create_gradcam_overlay
 
-
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
