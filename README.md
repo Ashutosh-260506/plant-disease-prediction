@@ -33,6 +33,16 @@ Grad-CAM
 Result + Visualization
 ```
 
+## 🖥️ Application Preview
+
+### Plant Image Upload
+
+![PlantLens AI Upload](docs/upload-screen.png)
+
+### Disease Prediction & Grad-CAM
+
+![PlantLens AI Result](docs/result-screen.png)
+
 ## 🛠️ Tech Stack
 
 | Category | Technology |
