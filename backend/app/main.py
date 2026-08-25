@@ -1,4 +1,6 @@
+import asyncio
 import base64
+import gc
 from io import BytesIO
 
 import numpy as np
@@ -11,7 +13,13 @@ from app.preprocessing import preprocess_image
 from app.gradcam import make_gradcam_heatmap
 from app.visualization import create_gradcam_overlay
 
+
 app = FastAPI()
+
+
+# --------------------------------------------------
+# CORS
+# --------------------------------------------------
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,12 +32,29 @@ app.add_middleware(
 )
 
 
+# --------------------------------------------------
+# Prediction lock
+# Prevent multiple TensorFlow predictions from
+# running simultaneously on the small Render instance.
+# --------------------------------------------------
+
+prediction_lock = asyncio.Lock()
+
+
+# --------------------------------------------------
+# Health check
+# --------------------------------------------------
+
 @app.get("/")
 def home():
     return {
         "message": "Plant Disease AI API is running"
     }
 
+
+# --------------------------------------------------
+# Model information
+# --------------------------------------------------
 
 @app.get("/model-info")
 def model_info():
@@ -39,55 +64,129 @@ def model_info():
     }
 
 
+# --------------------------------------------------
+# Prediction
+# --------------------------------------------------
+
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
 
-    image_data = await file.read()
+    async with prediction_lock:
 
-    image = Image.open(
-        BytesIO(image_data)
-    )
+        image_data = None
+        image = None
+        img_array = None
+        predictions = None
+        heatmap = None
+        overlay = None
+        buffer = None
 
-    img_array = preprocess_image(
-        image
-    )
+        try:
 
-    predictions = model.predict(
-        img_array,
-        verbose=0
-    )[0]
+            # --------------------------------------------------
+            # Read uploaded image
+            # --------------------------------------------------
 
-    predicted_class = int(
-        np.argmax(predictions)
-    )
+            image_data = await file.read()
 
-    confidence = float(
-        predictions[predicted_class]
-    )
+            image = Image.open(
+                BytesIO(image_data)
+            ).convert("RGB")
 
-    heatmap = make_gradcam_heatmap(
-        img_array,
-        predicted_class
-    )
 
-    overlay = create_gradcam_overlay(
-        image,
-        heatmap
-    )
+            # --------------------------------------------------
+            # Preprocess image
+            # --------------------------------------------------
 
-    buffer = BytesIO()
+            img_array = preprocess_image(
+                image
+            )
 
-    overlay.save(
-        buffer,
-        format="JPEG"
-    )
 
-    gradcam_base64 = base64.b64encode(
-        buffer.getvalue()
-    ).decode("utf-8")
+            # --------------------------------------------------
+            # Model prediction
+            # --------------------------------------------------
 
-    return {
-        "disease": class_names[predicted_class],
-        "confidence": confidence,
-        "gradcam": gradcam_base64
-    }
+            predictions = model.predict(
+                img_array,
+                verbose=0
+            )[0]
+
+
+            predicted_class = int(
+                np.argmax(predictions)
+            )
+
+            confidence = float(
+                predictions[predicted_class]
+            )
+
+
+            # --------------------------------------------------
+            # Grad-CAM
+            # --------------------------------------------------
+
+            heatmap = make_gradcam_heatmap(
+                img_array,
+                predicted_class
+            )
+
+
+            # --------------------------------------------------
+            # Create Grad-CAM overlay
+            # --------------------------------------------------
+
+            overlay = create_gradcam_overlay(
+                image,
+                heatmap
+            )
+
+
+            # --------------------------------------------------
+            # Convert overlay to Base64
+            # --------------------------------------------------
+
+            buffer = BytesIO()
+
+            overlay.save(
+                buffer,
+                format="JPEG",
+                quality=85,
+                optimize=True
+            )
+
+            gradcam_base64 = base64.b64encode(
+                buffer.getvalue()
+            ).decode("utf-8")
+
+
+            # --------------------------------------------------
+            # Prepare response
+            # --------------------------------------------------
+
+            result = {
+                "disease": class_names[predicted_class],
+                "confidence": confidence,
+                "gradcam": gradcam_base64
+            }
+
+
+            return result
+
+
+        finally:
+
+            # --------------------------------------------------
+            # Explicitly release temporary objects
+            # --------------------------------------------------
+
+            del image_data
+            del image
+            del img_array
+            del predictions
+            del heatmap
+            del overlay
+            del buffer
+
+            # Ask Python to release unused objects
+            gc.collect()
