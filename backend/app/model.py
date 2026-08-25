@@ -1,11 +1,17 @@
 import json
 import os
-import os
+
+# Force TensorFlow to use CPU
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 import tensorflow as tf
 
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.abspath(__file__)
+    )
+)
 
 MODEL_PATH = os.path.join(
     BASE_DIR,
@@ -20,7 +26,11 @@ CLASS_NAMES_PATH = os.path.join(
 )
 
 
-model = tf.keras.models.load_model(MODEL_PATH)
+# Load model once when the application starts
+model = tf.keras.models.load_model(
+    MODEL_PATH,
+    compile=False
+)
 
 
 with open(CLASS_NAMES_PATH, "r") as f:
