@@ -3,16 +3,13 @@ from io import BytesIO
 
 import numpy as np
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
 from app.model import model, class_names
 from app.preprocessing import preprocess_image
 from app.gradcam import make_gradcam_heatmap
 from app.visualization import create_gradcam_overlay
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
