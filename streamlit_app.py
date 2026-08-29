@@ -27,7 +27,7 @@ sys.path.insert(
 
 
 # --------------------------------------------------
-# Existing backend modules
+# Existing ML modules
 # --------------------------------------------------
 
 from app.model import model, class_names
@@ -48,63 +48,161 @@ st.set_page_config(
 
 
 # --------------------------------------------------
-# Styling
+# Custom CSS
 # --------------------------------------------------
 
 st.markdown(
     """
-    <style>
+<style>
 
-    .main-title {
-        text-align: center;
-        font-size: 42px;
-        font-weight: 700;
-        margin-bottom: 5px;
-    }
+.block-container {
+    max-width: 850px;
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+}
 
-    .subtitle {
-        text-align: center;
-        font-size: 18px;
-        margin-bottom: 30px;
-    }
+/* Brand */
 
-    .result-box {
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid #444;
-        margin-top: 20px;
-        text-align: center;
-    }
+.brand {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 45px;
+}
 
-    </style>
-    """,
+/* Hero */
+
+.hero {
+    text-align: center;
+    margin-bottom: 35px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background-color: #e8f7ed;
+    color: #237a3b;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.hero-title {
+    font-size: 46px;
+    line-height: 1.1;
+    margin: 18px 0 12px 0;
+    font-weight: 700;
+}
+
+.hero-subtitle {
+    font-size: 17px;
+    color: #6b7280;
+}
+
+/* Model information */
+
+.model-info {
+    text-align: center;
+    color: #7a827c;
+    font-size: 13px;
+    margin-bottom: 25px;
+}
+
+/* Result card */
+
+.result-card {
+    border: 1px solid #d9e2dc;
+    border-radius: 15px;
+    padding: 24px;
+    margin-top: 25px;
+    margin-bottom: 20px;
+    text-align: center;
+    background-color: #f8faf9;
+}
+
+.result-disease {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.result-confidence {
+    font-size: 17px;
+    color: #59635c;
+    margin-top: 8px;
+}
+
+/* Footer */
+
+.footer {
+    text-align: center;
+    color: #8a918c;
+    font-size: 13px;
+    margin-top: 50px;
+}
+
+</style>
+""",
     unsafe_allow_html=True
 )
 
 
 # --------------------------------------------------
-# Header
+# Brand
 # --------------------------------------------------
 
 st.markdown(
-    '<div class="main-title">🌿 PlantLens AI</div>',
+    '<div class="brand">🌿 PlantLens AI</div>',
+    unsafe_allow_html=True
+)
+
+
+# --------------------------------------------------
+# Hero section
+# --------------------------------------------------
+
+st.markdown(
+    '<div class="hero">',
     unsafe_allow_html=True
 )
 
 st.markdown(
-    '<div class="subtitle">'
-    'AI-powered plant disease detection with Grad-CAM'
+    '<div class="badge">🌱 AI POWERED PLANT HEALTH</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    '<div class="hero-title">See the health<br>of your plants.</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    '<div class="hero-subtitle">'
+    'Upload a plant image and let AI analyze its health.'
     '</div>',
     unsafe_allow_html=True
 )
 
-st.caption(
-    f"EfficientNetB0 • {len(class_names)} classes"
+st.markdown(
+    '</div>',
+    unsafe_allow_html=True
 )
 
 
 # --------------------------------------------------
-# Upload image
+# Model information
+# --------------------------------------------------
+
+st.markdown(
+    f"""
+<div class="model-info">
+    EfficientNetB0 • {len(class_names)} disease classes
+</div>
+""",
+    unsafe_allow_html=True
+)
+
+
+# --------------------------------------------------
+# Image upload
 # --------------------------------------------------
 
 uploaded_file = st.file_uploader(
@@ -119,7 +217,7 @@ uploaded_file = st.file_uploader(
 
 
 # --------------------------------------------------
-# Analyze image
+# Display uploaded image
 # --------------------------------------------------
 
 if uploaded_file is not None:
@@ -130,103 +228,142 @@ if uploaded_file is not None:
 
     st.image(
         image,
-        caption="Uploaded plant image",
+        caption=uploaded_file.name,
         use_container_width=True
     )
 
-    if st.button(
+
+    # --------------------------------------------------
+    # Analyze button
+    # --------------------------------------------------
+
+    analyze = st.button(
         "🔍 Analyze Plant Health",
         use_container_width=True
-    ):
+    )
+
+
+    if analyze:
 
         try:
 
             with st.spinner(
-                "Analyzing plant health..."
+                "Analyzing your plant..."
             ):
 
-                # Use your original preprocessing
+                # ------------------------------------------
+                # Original preprocessing
+                # ------------------------------------------
+
                 img_array = preprocess_image(
                     image
                 )
 
+
+                # ------------------------------------------
                 # Model prediction
+                # ------------------------------------------
+
                 predictions = model.predict(
                     img_array,
                     verbose=0
                 )[0]
 
+
                 predicted_class = int(
                     predictions.argmax()
                 )
 
+
                 confidence = float(
-                    predictions[predicted_class]
+                    predictions[
+                        predicted_class
+                    ]
                 )
 
+
+                # ------------------------------------------
                 # Grad-CAM
+                # ------------------------------------------
+
                 heatmap = make_gradcam_heatmap(
                     img_array,
                     predicted_class
                 )
 
-                # Create overlay
+
+                # ------------------------------------------
+                # Create Grad-CAM overlay
+                # ------------------------------------------
+
                 gradcam_image = create_gradcam_overlay(
                     image,
                     heatmap
                 )
 
+
+            # ------------------------------------------
+            # Prediction result
+            # ------------------------------------------
+
             disease = class_names[
                 predicted_class
             ]
+
 
             confidence_percent = (
                 confidence * 100
             )
 
 
-            # --------------------------------------------------
-            # Result
-            # --------------------------------------------------
+            # ------------------------------------------
+            # Success message
+            # ------------------------------------------
 
             st.success(
                 "Plant analysis complete!"
             )
 
+
+            # ------------------------------------------
+            # Result card
+            # ------------------------------------------
+
             st.markdown(
                 f"""
-                <div class="result-box">
-
-                <h2>{disease}</h2>
-
-                <h3>
-                Confidence: {confidence_percent:.2f}%
-                </h3>
-
-                </div>
-                """,
+<div class="result-card">
+    <div class="result-disease">
+        {disease}
+    </div>
+    <div class="result-confidence">
+        Confidence: {confidence_percent:.2f}%
+    </div>
+</div>
+""",
                 unsafe_allow_html=True
             )
 
 
-            # --------------------------------------------------
-            # Confidence bar
-            # --------------------------------------------------
+            # ------------------------------------------
+            # Confidence
+            # ------------------------------------------
 
             st.progress(
                 confidence
             )
 
 
-            # --------------------------------------------------
-            # Grad-CAM
-            # --------------------------------------------------
+            # ------------------------------------------
+            # AI Focus
+            # ------------------------------------------
 
             st.subheader(
-                "AI Focus"
+                "🔥 AI Focus"
             )
 
+
             col1, col2 = st.columns(2)
+
 
             with col1:
 
@@ -236,6 +373,7 @@ if uploaded_file is not None:
                     use_container_width=True
                 )
 
+
             with col2:
 
                 st.image(
@@ -244,6 +382,10 @@ if uploaded_file is not None:
                     use_container_width=True
                 )
 
+
+            # ------------------------------------------
+            # Explanation
+            # ------------------------------------------
 
             st.info(
                 "AI Focus highlights the regions "
@@ -259,3 +401,15 @@ if uploaded_file is not None:
             )
 
             st.exception(e)
+
+
+# --------------------------------------------------
+# Footer
+# --------------------------------------------------
+
+st.markdown(
+    '<div class="footer">'
+    'PlantLens AI • EfficientNetB0 • Grad-CAM'
+    '</div>',
+    unsafe_allow_html=True
+)
